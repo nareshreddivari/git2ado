@@ -3,9 +3,8 @@ on:
   push:
     branches:
       - main
-    # paths:
-    #   - 'calculator/**'
-
+    paths:
+      - ''
 permissions:
   id-token: write
   contents: read
