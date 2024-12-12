@@ -1,10 +1,23 @@
 name: workflow to build and deploy to Azure
+on:
+  push:
+    branches:
+      - main
+    # paths:
+    #   - 'calculator/**'
 
-on: push
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  build-in-actions-workflow:
+  check-changes:
     runs-on: ubuntu-latest
+# on: push
+
+# jobs:
+#   build-in-actions-workflow:
+#     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
               
