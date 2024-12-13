@@ -22,7 +22,7 @@ on:
       ResourceYamlFile:
         description: 'Select the resource YAML file'
         required: true
-        type: choice  # Ensure the type is 'choice' for dropdown
+        type: choice
         options:
           - 'vm_provision.yaml'
           - 'webapp_provision.yaml'
@@ -31,8 +31,7 @@ jobs:
   build-in-actions-workflow:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2  # Corrected checkout version
-
+      - uses: actions/checkout@v2
       - name: Setup Azure Login using Service Principal
         uses: azure/login@v1
         with:
@@ -54,15 +53,76 @@ jobs:
             echo "::set-output name=pipelineName::${{ github.event.inputs.pipelineName }}"
           fi
 
-      - name: 'Trigger an Azure Pipeline to deploy the app to PRODUCTION'
-        uses: Azure/pipelines@releases/v1
-        with:
-          azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
-          azure-pipeline-name: ${{ steps.set-pipeline-name.outputs.pipelineName }}
-          azure-devops-token: '3sI4Q2zIqRsNEFx5gcnnVu68FKq2jWYJu00VgnomnwV01mKh0q15JQQJ99ALACAAAAAAAAAAAAASAZDOLTAY'  # Ensure you have the correct secret for the token
-          parameters: |
-            pipelineName: ${{ steps.set-pipeline-name.outputs.pipelineName }}
-            orgName: ${{ github.event.inputs.orgName }}
-            projectName: ${{ github.event.inputs.projectName }}
-            targetRepositoryName: ${{ github.event.inputs.targetRepositoryName }}
-            ResourceYamlFile: ${{ github.event.inputs.ResourceYamlFile }}
+      - name: Check if pipeline exists
+        id: check-pipeline
+        run: |
+          pipeline_name="${{ steps.set-pipeline-name.outputs.pipelineName }}"
+          orgName="${{ github.event.inputs.orgName }}"
+          projectName="${{ github.event.inputs.projectName }}"
+          baseUrl="https://dev.azure.com/$orgName/$projectName/_apis/pipelines?api-version=7.1-preview.1"
+          echo "Checking if pipeline '$pipeline_name' exists in project '$projectName'..."
+          
+          # Fetch pipelines to check if the specified pipeline exists
+          response=$(curl -s -u :${{ secrets.AZURE_DEVOPS_TOKEN }} "$baseUrl")
+          echo "Pipeline Check Response: $response"
+          
+          pipelineExists=$(echo $response | jq ".value | map(select(.name == \"$pipeline_name\")) | length")
+
+          if [ "$pipelineExists" -eq 0 ]; then
+            echo "Pipeline '$pipeline_name' does not exist. Creating it now."
+            echo "::set-output name=shouldCreatePipeline::true"
+          else
+            echo "Pipeline '$pipeline_name' already exists."
+            echo "::set-output name=shouldCreatePipeline::false"
+          fi
+
+      - name: Create pipeline if not exists
+        if: steps.check-pipeline.outputs.shouldCreatePipeline == 'true'
+        run: |
+          pipeline_name="${{ steps.set-pipeline-name.outputs.pipelineName }}"
+          orgName="${{ github.event.inputs.orgName }}"
+          projectName="${{ github.event.inputs.projectName }}"
+          targetRepositoryName="${{ github.event.inputs.targetRepositoryName }}"
+          ResourceYamlFile="${{ github.event.inputs.ResourceYamlFile }}"
+          
+          # API to create a new pipeline
+          createPipelineUrl="https://dev.azure.com/$orgName/$projectName/_apis/pipelines?api-version=7.1-preview.1"
+          response=$(curl -s -X POST -u :${{ secrets.AZURE_DEVOPS_TOKEN }} -H "Content-Type: application/json" \
+            -d '{
+              "name": "'$pipeline_name'",
+              "configuration": {
+                "type": "yaml",
+                "path": "'$ResourceYamlFile'",
+                "repository": {
+                  "name": "'$targetRepositoryName'",
+                  "type": "azureReposGit"
+                }
+              }
+            }' "$createPipelineUrl")
+          
+          echo "Pipeline created successfully: $response"
+
+      - name: Trigger pipeline run
+        if: steps.check-pipeline.outputs.shouldCreatePipeline == 'false' || steps.check-pipeline.outputs.shouldCreatePipeline == 'true'
+        run: |
+          pipeline_name="${{ steps.set-pipeline-name.outputs.pipelineName }}"
+          orgName="${{ github.event.inputs.orgName }}"
+          projectName="${{ github.event.inputs.projectName }}"
+          baseUrl="https://dev.azure.com/$orgName/$projectName/_apis/pipelines"
+          
+          # Get the pipeline ID using the name
+          pipelineId=$(curl -s -u :${{ secrets.AZURE_DEVOPS_TOKEN }} "$baseUrl?api-version=7.1-preview.1" | jq -r ".value[] | select(.name == \"$pipeline_name\") | .id")
+          
+          if [ -z "$pipelineId" ]; then
+            echo "Error: Pipeline ID not found for '$pipeline_name'."
+            exit 1
+          fi
+          
+          echo "Triggering pipeline '$pipeline_name' with ID: $pipelineId"
+          
+          # Trigger the pipeline run
+          triggerUrl="https://dev.azure.com/$orgName/$projectName/_apis/pipelines/$pipelineId/runs?api-version=7.1-preview.1"
+          response=$(curl -s -X POST -u :${{ secrets.AZURE_DEVOPS_TOKEN }} -H "Content-Type: application/json" \
+            -d '{"resources": {"repositories": {"self": {"ref": "refs/heads/main"}}}}' "$triggerUrl")
+          
+          echo "Pipeline triggered successfully: $response"
