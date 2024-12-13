@@ -51,11 +51,11 @@ jobs:
             echo "::set-output name=pipelineName::${{ github.event.inputs.pipelineName }}"
           fi
 
-      - name: Trigger an Azure Pipeline to deploy the app to PRODUCTION
+      - name: Trigger an Existing Azure Pipeline to deploy the app to PRODUCTION
         uses: Azure/pipelines@releases/v1
         with:
           azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
-          azure-pipeline-name: 'test_Automation_Repo'  # Replace with your existing pipeline name
+          azure-pipeline-name: 'test_Automation_Repo'  # Use your existing pipeline name here
           azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
           parameters: |
             {
