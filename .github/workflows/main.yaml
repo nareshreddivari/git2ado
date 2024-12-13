@@ -1,29 +1,68 @@
 name: workflow to build and deploy to Azure
 
-on: push
+on:
+  workflow_dispatch:
+    inputs:
+      pipelineName:
+        description: 'Enter a custom pipeline name (Leave empty to generate dynamically)'
+        required: false
+        default: ''
+      orgName:
+        description: 'Enter your Azure DevOps Organization name'
+        required: true
+        default: 'devopsokn'
+      projectName:
+        description: 'Enter your Azure DevOps Project name'
+        required: true
+        default: 'MyPOC'
+      targetRepositoryName:
+        description: 'Enter the target repository name'
+        required: true
+        default: 'test_App_Repo'
+      ResourceYamlFile:
+        description: 'Select the resource YAML file'
+        required: true
+        default: 'webapp_provision.yaml'
+        options:
+          - 'vm_provision.yaml'
+          - 'webapp_provision.yaml'
 
 jobs:
   build-in-actions-workflow:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-              
-   # Authentication
-    # - uses: azure/login@v1
-    #   with:
-    #     creds: ${{ secrets.AZURE_CREDENTIALS  }}
-    - name: Setup Azure Login using Service Principal
-      uses: azure/login@v1
-      with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}      
+      - uses: actions/checkout@master
+
+      - name: Setup Azure Login using Service Principal
+        uses: azure/login@v1
+        with:
+            creds: ${{ secrets.AZURE_CREDENTIALS }}
+
   deploy-using-azure-pipelines:
     needs: build-in-actions-workflow
     runs-on: ubuntu-latest
     steps:
-    - name: 'Trigger an Azure Pipeline to deploy the app to PRODUCTION'
-      uses: Azure/pipelines@releases/v1
-      with:
-        azure-devops-project-url: 'https://dev.azure.com/devopsokn/MyPOC'
-        azure-pipeline-name: 'test_Automation_Repo' 
-        azure-devops-token: '3sI4Q2zIqRsNEFx5gcnnVu68FKq2jWYJu00VgnomnwV01mKh0q15JQQJ99ALACAAAAAAAAAAAAASAZDOLTAY'
+      - name: Set dynamic pipeline name if not provided
+        id: set-pipeline-name
+        run: |
+          if [ -z "${{ github.event.inputs.pipelineName }}" ]; then
+            # Generate dynamic pipeline name based on date and repo name
+            generated_pipeline_name="webapp-pipeline-$(date +'%Y%m%d%H%M%S')"
+            echo "Generated pipeline name: $generated_pipeline_name"
+            echo "::set-output name=pipelineName::$generated_pipeline_name"
+          else
+            echo "::set-output name=pipelineName::${{ github.event.inputs.pipelineName }}"
+          fi
 
+      - name: 'Trigger an Azure Pipeline to deploy the app to PRODUCTION'
+        uses: Azure/pipelines@releases/v1
+        with:
+          azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
+          azure-pipeline-name: ${{ steps.set-pipeline-name.outputs.pipelineName }}
+          azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}  # Use a secret for the token
+          parameters: |
+            pipelineName: ${{ steps.set-pipeline-name.outputs.pipelineName }}
+            orgName: ${{ github.event.inputs.orgName }}
+            projectName: ${{ github.event.inputs.projectName }}
+            targetRepositoryName: ${{ github.event.inputs.targetRepositoryName }}
+            ResourceYamlFile: ${{ github.event.inputs.ResourceYamlFile }}
