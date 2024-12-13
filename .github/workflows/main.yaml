@@ -102,7 +102,16 @@ jobs:
               }
             }' "$createPipelineUrl")
           
-          echo "Pipeline created response: $response"
+          echo "Pipeline creation response: $response"
+          
+          # Check if pipeline creation was successful
+          createdPipelineId=$(echo $response | jq -r ".id")
+          if [ -z "$createdPipelineId" ]; then
+            echo "Error: Pipeline creation failed."
+            exit 1
+          fi
+          
+          echo "Pipeline created successfully with ID: $createdPipelineId"
 
       - name: Trigger pipeline run
         if: steps.check-pipeline.outputs.shouldCreatePipeline == 'false' || steps.check-pipeline.outputs.shouldCreatePipeline == 'true'
