@@ -31,12 +31,12 @@ jobs:
   build-in-actions-workflow:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2  # Corrected checkout version
 
       - name: Setup Azure Login using Service Principal
         uses: azure/login@v1
         with:
-            creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
   deploy-using-azure-pipelines:
     needs: build-in-actions-workflow
@@ -59,7 +59,7 @@ jobs:
         with:
           azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
           azure-pipeline-name: ${{ steps.set-pipeline-name.outputs.pipelineName }}
-          azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}  # Use a secret for the token
+          azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}  # Ensure you have the correct secret for the token
           parameters: |
             pipelineName: ${{ steps.set-pipeline-name.outputs.pipelineName }}
             orgName: ${{ github.event.inputs.orgName }}
