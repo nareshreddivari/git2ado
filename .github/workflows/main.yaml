@@ -22,7 +22,7 @@ on:
       ResourceYamlFile:
         description: 'Select the resource YAML file'
         required: true
-        default: 'webapp_provision.yaml'
+        type: choice  # Ensure the type is 'choice' for dropdown
         options:
           - 'vm_provision.yaml'
           - 'webapp_provision.yaml'
