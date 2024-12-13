@@ -67,7 +67,8 @@ jobs:
           echo "Pipeline Check Response: $response"
           
           pipelineExists=$(echo $response | jq ".value | map(select(.name == \"$pipeline_name\")) | length")
-
+          echo "Pipeline exists check result: $pipelineExists"
+          
           if [ "$pipelineExists" -eq 0 ]; then
             echo "Pipeline '$pipeline_name' does not exist. Creating it now."
             echo "::set-output name=shouldCreatePipeline::true"
@@ -87,6 +88,7 @@ jobs:
           
           # API to create a new pipeline
           createPipelineUrl="https://dev.azure.com/$orgName/$projectName/_apis/pipelines?api-version=7.1-preview.1"
+          echo "Creating pipeline with name '$pipeline_name'..."
           response=$(curl -s -X POST -u :${{ secrets.AZURE_DEVOPS_TOKEN }} -H "Content-Type: application/json" \
             -d '{
               "name": "'$pipeline_name'",
@@ -100,7 +102,7 @@ jobs:
               }
             }' "$createPipelineUrl")
           
-          echo "Pipeline created successfully: $response"
+          echo "Pipeline created response: $response"
 
       - name: Trigger pipeline run
         if: steps.check-pipeline.outputs.shouldCreatePipeline == 'false' || steps.check-pipeline.outputs.shouldCreatePipeline == 'true'
@@ -111,6 +113,7 @@ jobs:
           baseUrl="https://dev.azure.com/$orgName/$projectName/_apis/pipelines"
           
           # Get the pipeline ID using the name
+          echo "Fetching pipeline ID for '$pipeline_name'..."
           pipelineId=$(curl -s -u :${{ secrets.AZURE_DEVOPS_TOKEN }} "$baseUrl?api-version=7.1-preview.1" | jq -r ".value[] | select(.name == \"$pipeline_name\") | .id")
           
           if [ -z "$pipelineId" ]; then
@@ -118,7 +121,7 @@ jobs:
             exit 1
           fi
           
-          echo "Triggering pipeline '$pipeline_name' with ID: $pipelineId"
+          echo "Pipeline ID for '$pipeline_name' is: $pipelineId"
           
           # Trigger the pipeline run
           triggerUrl="https://dev.azure.com/$orgName/$projectName/_apis/pipelines/$pipelineId/runs?api-version=7.1-preview.1"
