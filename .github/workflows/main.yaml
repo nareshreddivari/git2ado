@@ -59,7 +59,7 @@ jobs:
         with:
           azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
           azure-pipeline-name: ${{ steps.set-pipeline-name.outputs.pipelineName }}
-          azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}  # Ensure you have the correct secret for the token
+          azure-devops-token: '3sI4Q2zIqRsNEFx5gcnnVu68FKq2jWYJu00VgnomnwV01mKh0q15JQQJ99ALACAAAAAAAAAAAAASAZDOLTAY'  # Ensure you have the correct secret for the token
           parameters: |
             pipelineName: ${{ steps.set-pipeline-name.outputs.pipelineName }}
             orgName: ${{ github.event.inputs.orgName }}
