@@ -1,4 +1,4 @@
-name: Trigger Azure Pipeline
+name: Trigger Existing Azure Pipeline
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ on:
       targetRepositoryName:
         description: 'Enter the target repository name'
         required: true
-        default: 'test_App_Repo'
+        default: 'test_Automation_Repo'
       ResourceYamlFile:
         description: 'Select the resource YAML file'
         required: true
@@ -51,11 +51,14 @@ jobs:
             echo "::set-output name=pipelineName::${{ github.event.inputs.pipelineName }}"
           fi
 
-      - name: Trigger Azure Pipeline to Create and Deploy
-        uses: azure/pipelines@v1  # Using a custom Azure pipeline
+      - name: Trigger an Azure Pipeline to deploy the app to PRODUCTION
+        uses: Azure/pipelines@releases/v1
         with:
-          organization: ${{ github.event.inputs.orgName }}
-          project: ${{ github.event.inputs.projectName }}
-          pipeline_name: ${{ steps.set-pipeline-name.outputs.pipelineName }}
-          resource_yaml: ${{ github.event.inputs.ResourceYamlFile }}
-          target_repository: ${{ github.event.inputs.targetRepositoryName }}
+          azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
+          azure-pipeline-name: 'test_Automation_Repo'  # Replace with your existing pipeline name
+          azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
+          parameters: |
+            {
+              "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
+              "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}"
+            }
