@@ -1,4 +1,4 @@
-name: Create new VM in Azure 
+name: springapp
 
 on:
   workflow_dispatch:
