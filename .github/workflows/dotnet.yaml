@@ -1,0 +1,51 @@
+name: Create new VM in Azure 
+
+on:
+  workflow_dispatch:
+    inputs:
+      orgName:
+        description: 'Enter your Azure DevOps Organization name'
+        required: true
+      projectName:
+        description: 'Enter your Azure DevOps Project name'
+        required: true
+      azurePipelineName:
+        description: 'Enter the azure-pipeline-name'
+        required: true
+        default: 'dotnet'
+      applicationtype:
+        description: 'applicationtype'
+        required: true
+
+jobs:
+  # Display input values for debugging
+  display-input-values:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Display Input Values
+        run: |
+          echo "orgName: ${{ github.event.inputs.orgName }}"
+          echo "projectname: ${{ github.event.inputs.projectName }}"
+          echo "applicationtype: ${{ github.event.inputs.applicationtype }}"
+          echo "azurePipelineName: ${{ github.event.inputs.azurePipelineName }}"
+
+  build-in-actions-workflow:
+    runs-on: ubuntu-latest
+    needs: display-input-values
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Azure Login using Service Principal
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Trigger an Existing Azure Pipeline to deploy the app to PRODUCTION
+        uses: Azure/pipelines@releases/v1
+        with:
+          azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
+          azurePipelineName: ${{ github.event.inputs.azurePipelineName }}  # Use your existing pipeline name here
+          azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
+          parameters: |
+            {
+              "applicationtype": "${{ github.event.inputs.applicationtype }}",
+            }
