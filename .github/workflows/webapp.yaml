@@ -12,7 +12,7 @@ on:
       azure-pipeline-name:
         description: 'Enter the azure-pipeline-name'
         required: true
-        default: 'create_vm'
+        default: 'webapp'
       ResourceYamlFile:
         description: 'Select the resource YAML file'
         required: true
