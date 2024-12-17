@@ -9,7 +9,7 @@ on:
       projectName:
         description: 'Enter your Azure DevOps Project name'
         required: true
-      azurePipelineName:
+      azure-pipeline-name:
         description: 'Enter the azure-pipeline-name'
         required: true
         default: 'springapp'
@@ -27,7 +27,7 @@ jobs:
           echo "orgName: ${{ github.event.inputs.orgName }}"
           echo "projectname: ${{ github.event.inputs.projectName }}"
           echo "applicationtype: ${{ github.event.inputs.applicationtype }}"
-          echo "azurePipelineName: ${{ github.event.inputs.azurePipelineName }}"
+          echo "azure-pipeline-name: ${{ github.event.inputs.azure-pipeline-name }}"
 
   build-in-actions-workflow:
     runs-on: ubuntu-latest
@@ -43,9 +43,7 @@ jobs:
         uses: Azure/pipelines@releases/v1
         with:
           azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
-          azurePipelineName: ${{ github.event.inputs.azurePipelineName }}  # Use your existing pipeline name here
+          azure-pipeline-name: ${{ github.event.inputs.azure-pipeline-name }}  # Use your existing pipeline name here
           azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
           parameters: |
-            {
-              "applicationtype": "${{ github.event.inputs.applicationtype }}",
-            }
+          "ResourceYamlFile": "${{ github.event.inputs.applicationtype }}"
