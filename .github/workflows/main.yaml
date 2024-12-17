@@ -11,8 +11,8 @@ on:
         description: 'Enter your Azure DevOps Project name'
         required: true
         default: 'MyPOC'
-      targetRepositoryName:
-        description: 'Enter the target repository name'
+      azure-pipeline-name:
+        description: 'Enter the azure-pipeline-name'
         required: true
         default: 'test_Automation_Repo'
       ResourceYamlFile:
@@ -39,10 +39,8 @@ jobs:
         uses: Azure/pipelines@releases/v1
         with:
           azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
-          azure-pipeline-name: 'test_Automation_Repo'  # Use your existing pipeline name here
+          azure-pipeline-name: ${{ github.event.inputs.targetRepositoryName }}  # Use your existing pipeline name here
           azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
           parameters: |
-            {
-              "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
-              "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}"
-            }
+          "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}"
+        
