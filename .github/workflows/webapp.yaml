@@ -1,4 +1,4 @@
-name: Create new VM in Azure 
+name: webapp 
 
 on:
   workflow_dispatch:
