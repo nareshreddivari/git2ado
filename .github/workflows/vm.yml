@@ -1,4 +1,5 @@
 name: Create new VM in Azure 
+
 on:
   workflow_dispatch:
     inputs:
@@ -24,7 +25,7 @@ on:
       OS type:
         description: 'OS type'
         required: true
-        
+
 jobs:
   # Display input values for debugging
   display-input-values:
@@ -32,33 +33,33 @@ jobs:
     steps:
       - name: Display Input Values
         run: |
-          echo "orgName: ${{ github.event.inputs.orgName }} "
+          echo "orgName: ${{ github.event.inputs.orgName }}"
           echo "projectname: ${{ github.event.inputs.projectName }}"
           echo "ResourceYamlFile: ${{ github.event.inputs.ResourceYamlFile }}"
           echo "azure-pipeline-name: ${{ github.event.inputs.azure-pipeline-name }}"
           echo "Resourcegroup: ${{ github.event.inputs.Resourcegroup }}"
-          echo "VM Name: ${{ github.event.inputs.VM Name }}"
-          echo "OS type: ${{ github.event.inputs.OS type }}"
-          
+          echo "VM Name: ${{ github.event.inputs['VM Name'] }}"
+          echo "OS type: ${{ github.event.inputs['OS type'] }}"
+
   build-in-actions-workflow:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - name: Setup Azure Login using Service Principal
-      uses: azure/login@v1
-      with:
+      - uses: actions/checkout@v2
+      - name: Setup Azure Login using Service Principal
+        uses: azure/login@v1
+        with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-          
-    - name: Trigger an Existing Azure Pipeline to deploy the app to PRODUCTION
-      uses: Azure/pipelines@releases/v1
-      with:
-        azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
-        azure-pipeline-name: ${{ github.event.inputs.azure-pipeline-name }}  # Use your existing pipeline name here
-        azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
-        parameters: |
-        "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}"
-        "Resourcegroup": "${{ github.event.inputs.VM Name }}"
-        "VM Name": "${{ github.event.inputs.Resourcegroup }}"
-        "OS type": "${{ github.event.inputs.OS type }}"
-
- 
+      
+      - name: Trigger an Existing Azure Pipeline to deploy the app to PRODUCTION
+        uses: Azure/pipelines@releases/v1
+        with:
+          azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
+          azure-pipeline-name: ${{ github.event.inputs.azure-pipeline-name }}  # Use your existing pipeline name here
+          azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
+          parameters: |
+            {
+              "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
+              "Resourcegroup": "${{ github.event.inputs.Resourcegroup }}",
+              "VM Name": "${{ github.event.inputs['VM Name'] }}",
+              "OS type": "${{ github.event.inputs['OS type'] }}"
+            }
