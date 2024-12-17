@@ -46,4 +46,4 @@ jobs:
           azure-pipeline-name: ${{ github.event.inputs.azure-pipeline-name }}  # Use your existing pipeline name here
           azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
           parameters: |
-          "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}"
+          "ResourceYamlFile": "${{ github.event.inputs.applicationtype }}"
