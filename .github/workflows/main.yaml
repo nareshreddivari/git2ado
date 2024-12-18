@@ -6,15 +6,15 @@ on:
       orgName:
         description: 'Azure DevOps Organization Name'
         required: true
-        default: 'devopsokn'  # Change to your organization name
+        default: 'devopsokn'
       projectName:
         description: 'Azure DevOps Project Name'
         required: true
-        default: 'MyPOC'  # Change to your project name
+        default: 'MyPOC'
       azurePipelineDefinitionId:
         description: 'Azure DevOps Pipeline Definition ID'
         required: true
-        default: '260'  # Use the correct Pipeline Definition ID here
+        default: '260'
       ResourceYamlFile:
         description: 'Select the resource YAML file'
         required: true
@@ -36,7 +36,7 @@ jobs:
       - name: Setup Azure Login using Service Principal
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}  # Ensure AZURE_CREDENTIALS is saved in GitHub Secrets
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # Step 3: Get Resource YAML file
       - name: Get Resource YAML file
@@ -44,11 +44,11 @@ jobs:
           echo "Selected YAML file: ${{ github.event.inputs.ResourceYamlFile }}"
           echo "RESOURCE_YAML=${{ github.event.inputs.ResourceYamlFile }}" >> $GITHUB_ENV
 
-      # Step 4: Test Authorization with a simple API call to verify PAT
-      - name: Test Authorization with simple API call
+      # Step 4: Test Authorization with simplified API call
+      - name: Test Authorization with simplified API call
         run: |
-          echo "Testing Authorization with a simple API call"
-          curl -v -X GET \
+          echo "Testing Authorization with simplified API call"
+          curl --http1.1 -v -X GET \
             -H "Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)" \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/projects?api-version=7.1-preview.1"
 
@@ -57,8 +57,7 @@ jobs:
         run: |
           echo "Triggering Azure DevOps build with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ env.RESOURCE_YAML }}..."
 
-          # Trigger the build using the correct API URL and header
-          curl -v -X POST \
+          curl --http1.1 -v -X POST \
             -H "Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)" \
             -H "Content-Type: application/json" \
             -d '{
