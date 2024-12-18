@@ -47,8 +47,8 @@ jobs:
           # Hardcoded PAT for authorization
           PAT_TOKEN="3sI4Q2zIqRsNEFx5gcnnVu68FKq2jWYJu00VgnomnwV01mKh0q15JQQJ99ALACAAAAAAAAAAAAASAZDOLTAY"
 
-          # Base64 encode the PAT
-          AUTH_HEADER=$(echo -n ":${PAT_TOKEN}" | base64)
+          # Correctly base64 encode the PAT with a colon prefix (i.e., ":<PAT>")
+          AUTH_HEADER=$(echo -n ":$PAT_TOKEN" | base64)
 
           # Make the API request to get pipeline ID
           RESPONSE=$(curl -s -X GET \
