@@ -1,4 +1,4 @@
-name: Trigger Azure DevOps Build 
+name: Azure DevOps Build 
 
 on:
   workflow_dispatch:
