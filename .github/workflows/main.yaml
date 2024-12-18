@@ -1,20 +1,16 @@
 name: Trigger Azure DevOps Build
-
 on:
   workflow_dispatch:
     inputs:
       orgName:
         description: 'Azure DevOps Organization Name'
         required: true
-        default: 'devopsokn'  # Replace with your Azure DevOps organization name
       projectName:
         description: 'Azure DevOps Project Name'
         required: true
-        default: 'MyPOC'  # Replace with your Azure DevOps project name
       azurePipelineDefinitionId:
         description: 'Azure DevOps Pipeline Definition ID'
         required: true
-        default: '260'  # Replace with your pipeline definition ID
       ResourceYamlFile:
         description: 'Select the resource YAML file'
         required: true
@@ -23,16 +19,14 @@ on:
           - 'vm_provision.yaml'  # Replace with your YAML file options
           - 'webapp_provision.yaml'
       targetRepositoryName:
-        description: 'Name of the repository'
+        description: 'Repository Name'
         required: true
-        default: 'test_App_Repo'  # Replace with your repository name
       pipelineName:
-        description: 'Name of the pipeline'
+        description: 'Pipeline Name'
         required: true
-        default: 'pipeline'  # Replace with your pipeline name
 
 env:
-  RESOURCE_YAML: vm_provision.yaml  # Default to 'vm_provision.yaml' unless overridden
+  RESOURCE_YAML: vm_provision.yaml  # Default to vm_provision.yaml
 
 jobs:
   trigger-build:
@@ -100,4 +94,3 @@ jobs:
       - name: Post job cleanup
         run: |
           echo "Cleaning up after the build trigger..."
-          # You can add any post-processing steps here
