@@ -40,9 +40,13 @@ jobs:
         run: |
           echo "Getting the Azure DevOps pipeline ID..."
           PIPELINE_NAME="test_Automation_Repo"  # Update with the actual pipeline name
-          API_RESPONSE=$(curl --http1.1 -k -v -X GET \
+          
+          # Generate Base64 encoded PAT
+          BASE64_PAT="<Your_BASE64_PAT>"  # Replace with actual base64-encoded PAT
+          
+          API_RESPONSE=$(curl --http1.1 -v -X GET \
             "https://dev.azure.com/devopsokn/MyPOC/_apis/pipelines?api-version=7.1-preview.1" \
-            -H "Authorization: Basic $(echo -n :${{ secrets.AZURE_DEVOPS_TOKEN }} | base64)")
+            -H "Authorization: Basic $BASE64_PAT")
           
           echo "API Response: $API_RESPONSE"
           
@@ -50,6 +54,7 @@ jobs:
           echo "Pipeline ID: $PIPELINE_ID"
           
           echo "pipeline_id=$PIPELINE_ID" >> $GITHUB_ENV
+
 
       - name: Trigger Azure Pipeline
         run: |
