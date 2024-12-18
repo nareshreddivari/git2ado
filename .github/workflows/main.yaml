@@ -50,7 +50,7 @@ jobs:
           # Base64 encode the PAT (with a colon prefix) and set the Authorization header
           AUTH_HEADER=$(echo -n ":$PAT_TOKEN" | base64)
           
-          # Print out the Authorization header for debugging
+          # Debugging: Print the Authorization header
           echo "Authorization Header: Basic $AUTH_HEADER"
           
           # Make the API request to get pipeline ID (use HTTP/1.1 instead of HTTP/2)
