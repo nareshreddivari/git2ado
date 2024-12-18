@@ -53,10 +53,11 @@ jobs:
           # Print out the Authorization header for debugging
           echo "Authorization Header: Basic $AUTH_HEADER"
           
-          # Make the API request to get pipeline ID
+          # Make the API request to get pipeline ID (use HTTP/1.1 instead of HTTP/2)
           RESPONSE=$(curl -v -s -X GET \
             "$API_URL" \
-            -H "Authorization: Basic $AUTH_HEADER")
+            -H "Authorization: Basic $AUTH_HEADER" \
+            --http1.1)
 
           echo "Response from API: $RESPONSE"
           
