@@ -81,6 +81,7 @@ jobs:
           echo "Response Status Code: $response"
           cat response.json
 
+
       # Step 4: Handle the result of the build trigger
       - name: Check if the build was triggered successfully
         if: ${{ failure() }}
