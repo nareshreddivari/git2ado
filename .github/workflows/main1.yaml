@@ -1,4 +1,4 @@
-name: Azure DevOps Build 
+name: Trigger Azure DevOps Build 
 
 on:
   workflow_dispatch:
@@ -27,7 +27,7 @@ on:
         required: true
 
 env:
-  # This will now reference the YAML file selected via the input
+  # Use the selected YAML file from the input
   RESOURCE_YAML: ${{ github.event.inputs.ResourceYamlFile }}
 
 jobs:
@@ -38,15 +38,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Print the Authorization Token for debugging (be cautious with this in production)
+      # Debugging step to print the Authorization Token (use cautiously in a secure environment)
       - name: Print Authorization Token
         run: |
           echo "Authorization token is used for the cURL request, but not printed for security reasons."
 
-      # Debugging: Show the cURL payload
-      - name: Print cURL Request Payload
+      # Debugging: Print the cURL request body being sent to Azure DevOps
+      - name: Print cURL Request Body
         run: |
-          echo "cURL Request Payload: "
+          echo "Request body being sent to Azure DevOps:"
           echo '{
             "definition": {
               "id": "${{ github.event.inputs.azurePipelineDefinitionId }}"
@@ -84,9 +84,11 @@ jobs:
                 }' \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/build/builds?api-version=6.1-preview.6")
 
-          # Check the response for success
-          if [[ "$response" -ne 200 && "$response" -ne 202 ]]; then
-            echo "Error triggering Azure DevOps build. Status code: $response"
+          # Check the response status and output the response content for debugging
+          status_code=$(echo $response | tail -n 1)
+          echo "Response Status Code: $status_code"
+          if [[ "$status_code" -ne 200 && "$status_code" -ne 202 ]]; then
+            echo "Error triggering Azure DevOps build. Status code: $status_code"
             cat response.json
             exit 1
           fi
