@@ -46,10 +46,29 @@ jobs:
       - name: Get Pipeline ID by Name
         run: |
           echo "Searching for the pipeline ID by name..."
-          PIPELINE_ID=$(curl -s -X GET \
-            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines?api-version=7.1-preview.1" \
+          API_URL="https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines?api-version=7.1-preview.1"
+          RESPONSE=$(curl -s -X GET \
+            "$API_URL" \
             -H "Authorization: Basic $(echo -n ":${{ github.event.inputs.patToken }}" | base64)" \
-            --http1.1 | jq -r ".value[] | select(.name==\"${{ github.event.inputs.azurePipelineName }}\") | .id")
+            --http1.1)
+          
+          echo "Response from API: $RESPONSE"
+
+          # Check if the response is empty or not in expected format
+          if [[ "$RESPONSE" == "" ]]; then
+            echo "Error: No response from the API. Check your organization or project name."
+            exit 1
+          fi
+
+          # Attempt to extract pipeline ID using jq
+          PIPELINE_ID=$(echo "$RESPONSE" | jq -r ".value[] | select(.name==\"${{ github.event.inputs.azurePipelineName }}\") | .id")
+
+          # Check if the pipeline ID was found
+          if [[ "$PIPELINE_ID" == "null" || "$PIPELINE_ID" == "" ]]; then
+            echo "Error: Pipeline with name '${{ github.event.inputs.azurePipelineName }}' not found."
+            exit 1
+          fi
+
           echo "Pipeline ID: $PIPELINE_ID"
           echo "PIPELINE_ID=$PIPELINE_ID" >> $GITHUB_ENV
 
