@@ -67,7 +67,7 @@ jobs:
           echo "Triggering Azure DevOps build with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ env.RESOURCE_YAML }}..."
           
           response=$(curl --http1.1 -s -w "%{http_code}" -o response.json \
-            -H "Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)" \
+            -H "Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64 | tr -d '\n')" \
             -H "Content-Type: application/json" \
             -d '{
                   "definition": {
@@ -86,6 +86,7 @@ jobs:
           
           echo "Response Status Code: $response"
           cat response.json
+
 
       # Step 5: Check if the build was triggered successfully
       - name: Check if the build was triggered successfully
