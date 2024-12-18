@@ -6,68 +6,51 @@ on:
       orgName:
         description: 'Azure DevOps Organization Name'
         required: true
-        default: 'devopsokn'
+        default: 'devopsokn'  # Replace with your Azure DevOps organization name
       projectName:
         description: 'Azure DevOps Project Name'
         required: true
-        default: 'MyPOC'
+        default: 'MyPOC'  # Replace with your Azure DevOps project name
       azurePipelineDefinitionId:
         description: 'Azure DevOps Pipeline Definition ID'
         required: true
-        default: '260'
+        default: '260'  # Replace with your pipeline definition ID
       ResourceYamlFile:
         description: 'Select the resource YAML file'
         required: true
         type: choice
         options:
-          - 'vm_provision.yaml'
+          - 'vm_provision.yaml'  # Replace with your YAML file options
           - 'webapp_provision.yaml'
+      targetRepositoryName:
+        description: 'Name of the repository'
+        required: true
+        default: 'test_App_Repo'  # Replace with your repository name
+      pipelineName:
+        description: 'Name of the pipeline'
+        required: true
+        default: 'pipeline'  # Replace with your pipeline name
+
+env:
+  RESOURCE_YAML: vm_provision.yaml  # Default to 'vm_provision.yaml' unless overridden
 
 jobs:
   trigger-build:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
+      # Step 1: Checkout the repository to access the resources
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Setup Azure Login using Service Principal
-      - name: Setup Azure Login using Service Principal
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # Step 3: Get Resource YAML file
-      - name: Get Resource YAML file
-        run: |
-          echo "Selected YAML file: ${{ github.event.inputs.ResourceYamlFile }}"
-          echo "RESOURCE_YAML=${{ github.event.inputs.ResourceYamlFile }}" >> $GITHUB_ENV
-
-      # Step 4: Test Authorization with simplified API call
-      - name: Test Authorization with simplified API call
-        run: |
-          echo "Testing Authorization with simplified API call"
-          curl --http1.1 -v -X GET \
-            -H "Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)" \
-            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/projects?api-version=7.1-preview.1"
-
-      # Step 5: Trigger Azure DevOps Build
-      # Step 5: Trigger Azure DevOps Build
+      # Step 2: Trigger Azure DevOps Build using cURL
       - name: Trigger Azure DevOps Build
         run: |
           echo "Triggering Azure DevOps build with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ env.RESOURCE_YAML }}..."
           
-          # Create the Authorization header
-          AUTH_HEADER="Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)"
-          
-          # Debugging: Output the raw token and the Authorization header (be cautious with printing tokens in logs)
-          echo "Base64-encoded token: $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)"
-          echo "Authorization header: $AUTH_HEADER"
-          
-          # Trigger build with proper header
+          # Ensure that all required parameters are present
           curl --http1.1 -v \
-            -H "$AUTH_HEADER" \
+            -H "Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)" \
             -H "Content-Type: application/json" \
             -d '{
                   "definition": {
@@ -75,17 +58,24 @@ jobs:
                   },
                   "sourceBranch": "refs/heads/main",
                   "parameters": {
-                    "yamlFile": "${{ env.RESOURCE_YAML }}"
+                    "yamlFile": "${{ env.RESOURCE_YAML }}",
+                    "orgName": "${{ github.event.inputs.orgName }}",
+                    "projectName": "${{ github.event.inputs.projectName }}",
+                    "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}",
+                    "pipelineName": "${{ github.event.inputs.pipelineName }}"
                   }
                 }' \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/build/builds?api-version=6.1-preview.6"
 
-      # Optional: Check if build was successfully triggered
-      - name: Check if build was triggered
+      # Step 3: Handle the result of the build trigger
+      - name: Check if the build was triggered successfully
+        if: ${{ failure() }}
         run: |
-          if [ $? -eq 0 ]; then
-            echo "Build triggered successfully."
-          else
-            echo "Failed to trigger the build."
-            exit 1
-          fi
+          echo "Build trigger failed!"
+          exit 1
+
+      # Step 4: Post-job cleanup or additional actions
+      - name: Post job cleanup
+        run: |
+          echo "Cleaning up after the build trigger..."
+          # You can add any post-processing steps here
