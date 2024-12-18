@@ -40,7 +40,7 @@ jobs:
         run: |
           echo "Getting the Azure DevOps pipeline ID..."
           PIPELINE_NAME="test_Automation_Repo"  # Update with the actual pipeline name
-          API_RESPONSE=$(curl -X GET \
+          API_RESPONSE=$(curl -v -X GET \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines?api-version=7.1-preview.1" \
             -H "Authorization: Basic $(echo -n :${{ secrets.AZURE_DEVOPS_TOKEN }} | base64)")
           echo "API Response: $API_RESPONSE"
