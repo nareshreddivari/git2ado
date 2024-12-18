@@ -44,8 +44,8 @@ jobs:
           echo "Searching for the pipeline ID by name..."
           API_URL="https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines?api-version=7.1-preview.1"
 
-          # Hardcoded PAT for authorization
-          PAT_TOKEN="your_personal_access_token"  # Replace with your actual PAT
+          # Hardcoded PAT for authorization (ensure the correct token scope)
+          PAT_TOKEN="3sI4Q2zIqRsNEFx5gcnnVu68FKq2jWYJu00VgnomnwV01mKh0q15JQQJ99ALACAAAAAAAAAAAAASAZDOLTAY"  # Replace with your actual PAT
 
           # Base64 encode the PAT with a colon prefix
           AUTH_HEADER=$(echo -n ":$PAT_TOKEN" | base64)
@@ -54,7 +54,7 @@ jobs:
           echo "Authorization Header: Basic $AUTH_HEADER"
 
           # Make the API request to get pipeline ID (use HTTP/1.1 instead of HTTP/2)
-          RESPONSE=$(curl -v -s -X GET \
+          RESPONSE=$(curl -s -X GET \
             "$API_URL" \
             -H "Authorization: Basic $AUTH_HEADER" \
             --http1.1)
@@ -92,7 +92,7 @@ jobs:
           curl -v -X GET \
             -H "Authorization: Basic $AUTH_HEADER" \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/projects?api-version=7.1-preview.1"
-          
+
       # Step 6: Trigger Azure DevOps Pipeline
       - name: Trigger Azure DevOps Pipeline
         run: |
