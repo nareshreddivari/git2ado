@@ -37,13 +37,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Trigger Azure DevOps Build
+      # Step 2: Trigger Azure DevOps Build using hardcoded PAT
       - name: Trigger Azure DevOps Build
         run: |
           echo "Triggering Azure DevOps build with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ env.RESOURCE_YAML }}..."
           
           response=$(curl -s -w "%{http_code}" -o response.json \
-            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_TOKEN }}" \
+            -H "Authorization: Basic $(echo -n ":5vVJ5DjVhE340suClonK4jdCRowrCDsw86IAOXhfZLpKIUepbk9zJQQJ99ALACAAAAAAAAAAAAASAZDOaTiX" | base64)" \
             -H "Content-Type: application/json" \
             -d '{
                   "definition": {
