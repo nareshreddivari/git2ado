@@ -35,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout repository to access files
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -61,7 +62,7 @@ jobs:
             }
           }'
 
-      # Step 1: Trigger Azure DevOps Build via cURL
+      # Step 2: Trigger Azure DevOps Build via cURL
       - name: Trigger Azure DevOps Build
         run: |
           echo "Triggering Azure DevOps build with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ env.RESOURCE_YAML }}..."
@@ -93,7 +94,7 @@ jobs:
             exit 1
           fi
 
-      # Post-job cleanup (optional)
+      # Step 3: Post-job cleanup (optional)
       - name: Post job cleanup
         run: |
           echo "Cleaning up after the build trigger..."
