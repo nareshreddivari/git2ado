@@ -47,11 +47,15 @@ jobs:
         run: |
           echo "Searching for the pipeline ID by name..."
           API_URL="https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines?api-version=7.1-preview.1"
+          
+          # Base64 encode the PAT for authorization
+          AUTH_HEADER=$(echo -n ":${{ github.event.inputs.patToken }}" | base64)
+
           RESPONSE=$(curl -s -X GET \
             "$API_URL" \
-            -H "Authorization: Basic $(echo -n ":${{ github.event.inputs.patToken }}" | base64)" \
+            -H "Authorization: Basic $AUTH_HEADER" \
             --http1.1)
-          
+
           echo "Response from API: $RESPONSE"
 
           # Check if the response is empty or not in expected format
@@ -84,7 +88,7 @@ jobs:
           echo "Triggering Azure DevOps pipeline with ID ${{ env.PIPELINE_ID }} using YAML file ${{ env.RESOURCE_YAML }}..."
           curl -v -L -X POST \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ env.PIPELINE_ID }}/runs?api-version=7.1-preview.1" \
-            -H "Authorization: Basic $(echo -n ":${{ github.event.inputs.patToken }}" | base64)" \
+            -H "Authorization: Basic $AUTH_HEADER" \
             -H "Content-Type: application/json" \
             -d '{
                   "resources": {
