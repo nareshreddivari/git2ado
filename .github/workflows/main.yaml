@@ -1,4 +1,5 @@
 name: Trigger Azure DevOps Build
+
 on:
   workflow_dispatch:
     inputs:
@@ -40,7 +41,7 @@ jobs:
       # Step 2: Print Authorization Token (for debugging)
       - name: Print Authorization Token
         run: |
-          echo "Authorization Header: $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)"
+          echo "Decoded Authorization Token: $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64 --decode)"
 
       # Step 3: Print cURL Request Payload (for debugging)
       - name: Print cURL Request Payload
@@ -65,7 +66,7 @@ jobs:
         run: |
           echo "Triggering Azure DevOps build with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ env.RESOURCE_YAML }}..."
           
-          curl --http1.1 -v \
+          response=$(curl --http1.1 -s -w "%{http_code}" -o response.json \
             -H "Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)" \
             -H "Content-Type: application/json" \
             -d '{
@@ -81,9 +82,12 @@ jobs:
                     "pipelineName": "${{ github.event.inputs.pipelineName }}"
                   }
                 }' \
-            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/build/builds?api-version=6.1-preview.6"
+            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/build/builds?api-version=6.1-preview.6")
+          
+          echo "Response Status Code: $response"
+          cat response.json
 
-      # Step 5: Handle the result of the build trigger
+      # Step 5: Check if the build was triggered successfully
       - name: Check if the build was triggered successfully
         if: ${{ failure() }}
         run: |
