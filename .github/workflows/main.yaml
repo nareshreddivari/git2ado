@@ -42,7 +42,8 @@ jobs:
         run: |
           echo "Triggering Azure DevOps build with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ env.RESOURCE_YAML }}..."
           
-          response=$(curl -s -w "%{http_code}" -o response.json \
+          # Perform the request
+          response=$(curl -s -w "%{http_code}" -o response.json -D headers.txt \
             -H "Authorization: Basic 5vVJ5DjVhE340suClonK4jdCRowrCDsw86IAOXhfZLpKIUepbk9zJQQJ99ALACAAAAAAAAAAAAASAZDOaTiX" \
             -H "Content-Type: application/json" \
             -d '{
@@ -51,7 +52,7 @@ jobs:
                   },
                   "sourceBranch": "refs/heads/main",
                   "parameters": {
-                    "yamlFile": "${{ env.RESOURCE_YAML }}",
+                    "ResourceYamlFile": "${{ env.RESOURCE_YAML }}",
                     "orgName": "${{ github.event.inputs.orgName }}",
                     "projectName": "${{ github.event.inputs.projectName }}",
                     "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}",
@@ -60,9 +61,12 @@ jobs:
                 }' \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/build/builds?api-version=6.1-preview.6")
 
+          # Log response code, body, and headers
           echo "Response Status Code: $response"
           echo "Response Body: "
           cat response.json
+          echo "Response Headers: "
+          cat headers.txt
 
       # Step 3: Check if the build was triggered successfully
       - name: Check if the build was triggered successfully
