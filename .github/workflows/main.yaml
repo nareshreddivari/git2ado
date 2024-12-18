@@ -22,6 +22,8 @@ on:
         options:
           - 'vm_provision.yaml'
           - 'webapp_provision.yaml'
+env:
+  ResourceYamlFile: vm_provision.yaml  # Default to vm_provision.yaml
 
 jobs:
   trigger-azure-pipeline:
@@ -34,6 +36,12 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get Resource YAML file
+        run: |
+          echo "Selected YAML file: ${{ github.event.inputs.ResourceYamlFile }}"
+          echo "RESOURCE_YAML=${{ github.event.inputs.ResourceYamlFile }}" >> $GITHUB_ENV
+
 
       - name: Trigger an Existing Azure Pipeline to deploy the app to PRODUCTION
         uses: Azure/pipelines@releases/v1
