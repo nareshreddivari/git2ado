@@ -3,10 +3,6 @@ name: Trigger Existing Azure Pipeline
 on:
   workflow_dispatch:
     inputs:
-      pipelineName:
-        description: 'Enter a custom pipeline name (Leave empty to generate dynamically)'
-        required: false
-        default: ''
       orgName:
         description: 'Enter your Azure DevOps Organization name'
         required: true
@@ -39,23 +35,11 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Set dynamic pipeline name if not provided
-        id: set-pipeline-name
-        run: |
-          if [ -z "${{ github.event.inputs.pipelineName }}" ]; then
-            # Generate dynamic pipeline name based on date and repo name
-            generated_pipeline_name="webapp-pipeline-$(date +'%Y%m%d%H%M%S')"
-            echo "Generated pipeline name: $generated_pipeline_name"
-            echo "::set-output name=pipelineName::$generated_pipeline_name"
-          else
-            echo "::set-output name=pipelineName::${{ github.event.inputs.pipelineName }}"
-          fi
-
       - name: Trigger an Existing Azure Pipeline to deploy the app to PRODUCTION
         uses: Azure/pipelines@releases/v1
         with:
           azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
-          azure-pipeline-name: 'test_Automation_Repo'  # Use your existing pipeline name here
+          azurePipelineName: '${{ github.event.inputs.azurePipelineName }}'  # Use your existing pipeline name here
           azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
           parameters: |
             {
