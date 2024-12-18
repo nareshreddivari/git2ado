@@ -52,30 +52,29 @@ jobs:
           
           # Print out the Authorization header for debugging
           echo "Authorization Header: Basic $AUTH_HEADER"
-
+          
           # Make the API request to get pipeline ID
-          RESPONSE=$(curl -s -X GET \
+          RESPONSE=$(curl -v -s -X GET \
             "$API_URL" \
-            -H "Authorization: Basic $AUTH_HEADER" \
-            --http1.1)
+            -H "Authorization: Basic $AUTH_HEADER")
 
           echo "Response from API: $RESPONSE"
-
+          
           # Check if the response is empty or not in expected format
           if [[ "$RESPONSE" == "" ]]; then
             echo "Error: No response from the API. Check your organization or project name."
             exit 1
           fi
-
+          
           # Attempt to extract pipeline ID using jq
           PIPELINE_ID=$(echo "$RESPONSE" | jq -r ".value[] | select(.name==\"${{ github.event.inputs.azurePipelineName }}\") | .id")
-
+          
           # Check if the pipeline ID was found
           if [[ "$PIPELINE_ID" == "null" || "$PIPELINE_ID" == "" ]]; then
             echo "Error: Pipeline with name '${{ github.event.inputs.azurePipelineName }}' not found."
             exit 1
           fi
-
+          
           echo "Pipeline ID: $PIPELINE_ID"
           echo "PIPELINE_ID=$PIPELINE_ID" >> $GITHUB_ENV
 
@@ -89,7 +88,7 @@ jobs:
       - name: Trigger Azure DevOps Pipeline
         run: |
           echo "Triggering Azure DevOps pipeline with ID ${{ env.PIPELINE_ID }} using YAML file ${{ env.RESOURCE_YAML }}..."
-          curl -v -L -X POST \
+          curl -v -X POST \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ env.PIPELINE_ID }}/runs?api-version=7.1-preview.1" \
             -H "Authorization: Basic $AUTH_HEADER" \
             -H "Content-Type: application/json" \
@@ -104,4 +103,4 @@ jobs:
                   "templateParameters": {
                     "yamlFile": "'${{ env.RESOURCE_YAML }}'"
                   }
-                }' --http1.1
+                }'
