@@ -11,7 +11,7 @@ on:
         description: 'Enter your Azure DevOps Project name'
         required: true
         default: 'MyPOC'
-      azurePipelineName:
+      targetRepositoryName:
         description: 'Enter the target repository name'
         required: true
         default: 'test_Automation_Repo'
@@ -40,14 +40,20 @@ jobs:
         run: |
           echo "Getting the Azure DevOps pipeline ID..."
           PIPELINE_NAME="test_Automation_Repo"  # Update with the actual pipeline name
-          PIPELINE_ID=$(curl -X GET \
+          API_RESPONSE=$(curl -X GET \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines?api-version=7.1-preview.1" \
-            -H "Authorization: Basic $(echo -n :${{ secrets.AZURE_DEVOPS_TOKEN }} | base64)" | jq -r ".value[] | select(.name == \"$PIPELINE_NAME\") | .id")
+            -H "Authorization: Basic $(echo -n :${{ secrets.AZURE_DEVOPS_TOKEN }} | base64)")
+          echo "API Response: $API_RESPONSE"
+          PIPELINE_ID=$(echo $API_RESPONSE | jq -r ".value[] | select(.name == \"$PIPELINE_NAME\") | .id")
           echo "Pipeline ID: $PIPELINE_ID"
           echo "pipeline_id=$PIPELINE_ID" >> $GITHUB_ENV
 
       - name: Trigger Azure Pipeline
         run: |
+          if [ -z "${{ env.pipeline_id }}" ]; then
+            echo "Error: Pipeline ID not found"
+            exit 1
+          fi
           echo "Triggering the Azure DevOps pipeline..."
           curl -X POST \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ env.pipeline_id }}/runs?api-version=7.1-preview.1" \
@@ -56,7 +62,7 @@ jobs:
             -d '{
               "variables": {
                 "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
-                "azurePipelineName": "${{ github.event.inputs.azurePipelineName }}",
+                "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}",
                 "orgName": "${{ github.event.inputs.orgName }}",
                 "projectName": "${{ github.event.inputs.projectName }}"
               }
