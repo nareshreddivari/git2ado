@@ -49,7 +49,7 @@ jobs:
         run: |
           echo "Testing Authorization with a simple API call"
           curl -v -X GET \
-            -H "Authorization: Basic ${{ secrets.AZURE_PAT }}" \
+            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_TOKEN }}" \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/projects?api-version=7.1-preview.1"
 
       # Step 5: Trigger Azure DevOps Pipeline using the pipeline definition ID
@@ -60,7 +60,7 @@ jobs:
           # Trigger the pipeline using the correct URL and header
           curl -v -X POST \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ github.event.inputs.azurePipelineDefinitionId }}/runs?api-version=7.1-preview.1" \
-            -H "Authorization: Basic ${{ secrets.AZURE_PAT }}" \
+            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
                   "resources": {
