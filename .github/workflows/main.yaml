@@ -11,7 +11,7 @@ on:
         description: 'Enter your Azure DevOps Project name'
         required: true
         default: 'MyPOC'
-      targetRepositoryName:
+      azurePipelineName:
         description: 'Enter the target repository name'
         required: true
         default: 'test_Automation_Repo'
@@ -35,16 +35,31 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Trigger Azure Pipeline using REST API
+      - name: Get Azure DevOps Pipeline ID
+        id: get-pipeline-id
         run: |
-          curl -X POST "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ secrets.PIPELINE_ID }}/runs?api-version=7.1-preview.1" \
-          -H "Content-Type: application/json" \
-          -H "Authorization: Basic $(echo -n :${{ secrets.AZURE_DEVOPS_TOKEN }} | base64)" \
-          -d '{
-                "variables": {
-                  "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
-                  "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}",
-                  "orgName": "${{ github.event.inputs.orgName }}",
-                  "projectName": "${{ github.event.inputs.projectName }}"
-                }
-              }'
+          echo "Getting the Azure DevOps pipeline ID..."
+          PIPELINE_NAME="test_Automation_Repo"  # Update with the actual pipeline name
+          PIPELINE_ID=$(curl -X GET \
+            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines?api-version=7.1-preview.1" \
+            -H "Authorization: Basic $(echo -n :${{ secrets.AZURE_DEVOPS_TOKEN }} | base64)" | jq -r ".value[] | select(.name == \"$PIPELINE_NAME\") | .id")
+          echo "Pipeline ID: $PIPELINE_ID"
+          echo "pipeline_id=$PIPELINE_ID" >> $GITHUB_ENV
+
+      - name: Trigger Azure Pipeline
+        run: |
+          echo "Triggering the Azure DevOps pipeline..."
+          curl -X POST \
+            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ env.pipeline_id }}/runs?api-version=7.1-preview.1" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Basic $(echo -n :${{ secrets.AZURE_DEVOPS_TOKEN }} | base64)" \
+            -d '{
+              "variables": {
+                "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
+                "azurePipelineName": "${{ github.event.inputs.azurePipelineName }}",
+                "orgName": "${{ github.event.inputs.orgName }}",
+                "projectName": "${{ github.event.inputs.projectName }}"
+              }
+            }' --http1.1
+        env:
+          AZURE_DEVOPS_TOKEN: ${{ secrets.AZURE_DEVOPS_TOKEN }}
