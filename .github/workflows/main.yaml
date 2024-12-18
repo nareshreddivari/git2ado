@@ -1,4 +1,4 @@
-name: Trigger Azure DevOps Pipeline
+name: Trigger Azure DevOps Build
 
 on:
   workflow_dispatch:
@@ -24,7 +24,7 @@ on:
           - 'webapp_provision.yaml'
 
 jobs:
-  trigger-pipeline:
+  trigger-build:
     runs-on: ubuntu-latest
 
     steps:
@@ -49,28 +49,25 @@ jobs:
         run: |
           echo "Testing Authorization with a simple API call"
           curl -v -X GET \
-            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_TOKEN }}" \
+            -H "Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)" \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/projects?api-version=7.1-preview.1"
 
-      # Step 5: Trigger Azure DevOps Pipeline using the pipeline definition ID
-      - name: Trigger Azure DevOps Pipeline
+      # Step 5: Trigger Azure DevOps Build
+      - name: Trigger Azure DevOps Build
         run: |
-          echo "Triggering Azure DevOps pipeline with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ env.RESOURCE_YAML }}..."
+          echo "Triggering Azure DevOps build with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ env.RESOURCE_YAML }}..."
 
-          # Trigger the pipeline using the correct URL and header
+          # Trigger the build using the correct API URL and header
           curl -v -X POST \
-            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ github.event.inputs.azurePipelineDefinitionId }}/runs?api-version=7.1-preview.1" \
-            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_TOKEN }}" \
+            -H "Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)" \
             -H "Content-Type: application/json" \
             -d '{
-                  "resources": {
-                    "repositories": {
-                      "self": {
-                        "refName": "refs/heads/main"
-                      }
-                    }
+                  "definition": {
+                    "id": "${{ github.event.inputs.azurePipelineDefinitionId }}"
                   },
-                  "templateParameters": {
-                    "yamlFile": "'${{ env.RESOURCE_YAML }}'"
+                  "sourceBranch": "refs/heads/main",
+                  "parameters": {
+                    "yamlFile": "${{ env.RESOURCE_YAML }}"
                   }
-                }'
+                }' \
+            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/build/builds?api-version=6.1-preview.6"
