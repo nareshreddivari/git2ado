@@ -56,12 +56,15 @@ jobs:
       - name: Trigger Azure DevOps Build
         run: |
           echo "Triggering Azure DevOps build with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ env.RESOURCE_YAML }}..."
+          
+          # Create the Authorization header
           AUTH_HEADER="Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)"
           
-          # Debugging: Output Authorization header (be cautious with printing tokens in logs)
+          # Debugging: Output the raw token and the Authorization header (be cautious with printing tokens in logs)
+          echo "Base64-encoded token: $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)"
           echo "Authorization header: $AUTH_HEADER"
           
-          # Trigger build
+          # Trigger build with proper header
           curl --http1.1 -v -X POST \
             -H "$AUTH_HEADER" \
             -H "Content-Type: application/json" \
