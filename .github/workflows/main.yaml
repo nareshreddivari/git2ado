@@ -1,4 +1,5 @@
 name: Trigger Azure DevOps Build
+
 on:
   workflow_dispatch:
     inputs:
@@ -16,7 +17,7 @@ on:
         required: true
         type: choice
         options:
-          - 'vm_provision.yaml'  # Replace with your YAML file options
+          - 'vm_provision.yaml'
           - 'webapp_provision.yaml'
       targetRepositoryName:
         description: 'Repository Name'
@@ -26,18 +27,27 @@ on:
         required: true
 
 env:
-  RESOURCE_YAML: vm_provision.yaml  # Default to vm_provision.yaml
+  RESOURCE_YAML: ${{ github.event.inputs.ResourceYamlFile }}
 
 jobs:
   trigger-build:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository to access the resources
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Print cURL Request Payload (for debugging)
+      - name: Check if resource YAML file exists
+        run: |
+          if [ ! -f "./${{ github.event.inputs.ResourceYamlFile }}" ]; then
+            echo "Error: YAML file ${{ github.event.inputs.ResourceYamlFile }} does not exist!"
+            exit 1
+          fi
+
+      - name: Print Authorization Token
+        run: |
+          echo "Authorization token is used for the cURL request, but not printed for security reasons."
+
       - name: Print cURL Request Payload
         run: |
           echo "cURL Request Payload: "
@@ -55,13 +65,11 @@ jobs:
             }
           }'
 
-      # Step 3: Trigger Azure DevOps Build using cURL
       - name: Trigger Azure DevOps Build
         run: |
           echo "Triggering Azure DevOps build with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ env.RESOURCE_YAML }}..."
-          
           response=$(curl --http1.1 -s -w "%{http_code}" -o response.json \
-            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_TOKEN }}" \
+            -H "Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64 | tr -d '\n')" \
             -H "Content-Type: application/json" \
             -d '{
                   "definition": {
@@ -78,18 +86,12 @@ jobs:
                 }' \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/build/builds?api-version=6.1-preview.6")
 
-          echo "Response Status Code: $response"
-          cat response.json
+          if [[ "$response" -ne 200 && "$response" -ne 202 ]]; then
+            echo "Error triggering Azure DevOps build. Status code: $response"
+            cat response.json
+            exit 1
+          fi
 
-
-      # Step 4: Handle the result of the build trigger
-      - name: Check if the build was triggered successfully
-        if: ${{ failure() }}
-        run: |
-          echo "Build trigger failed!"
-          exit 1
-
-      # Step 5: Post-job cleanup or additional actions
       - name: Post job cleanup
         run: |
           echo "Cleaning up after the build trigger..."
