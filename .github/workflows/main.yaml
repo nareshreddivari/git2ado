@@ -17,6 +17,10 @@ on:
         description: 'Resource YAML file (e.g., vm_provision.yaml)'
         required: true
         default: 'vm_provision.yaml'  # Default YAML file
+        type: choice
+        options:
+          - 'vm_provision.yaml'
+          - 'webapp_provision.yaml'
       targetRepositoryName:
         description: 'Target Repository Name'
         required: true
@@ -42,7 +46,7 @@ jobs:
           
           # Perform the request to trigger the build with the provided parameters
           response=$(curl -L -s -w "%{http_code}" -o response.json -D headers.txt \
-            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_PAT }}" \  # Corrected header usage
+            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_TOKEN }}" \  # Corrected header usage
             -H "Content-Type: application/json" \
             -d '{
                   "definition": {
@@ -50,7 +54,7 @@ jobs:
                   },
                   "sourceBranch": "refs/heads/main",  # Adjust if you need a different branch
                   "parameters": {
-                    "yamlFile": "${{ github.event.inputs.resourceYamlFile }}",  # YAML file parameter
+                    "resourceYamlFile": "${{ github.event.inputs.resourceYamlFile }}",  # YAML file parameter
                     "orgName": "${{ github.event.inputs.orgName }}",  # Org name parameter
                     "projectName": "${{ github.event.inputs.projectName }}",  # Project name parameter
                     "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}",  # Repository name parameter
