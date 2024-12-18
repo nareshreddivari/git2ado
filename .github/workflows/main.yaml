@@ -1,78 +1,64 @@
-name: Trigger Azure DevOps Build
+name: Trigger Existing Azure Pipeline
 
 on:
   workflow_dispatch:
     inputs:
+      pipelineName:
+        description: 'Enter a custom pipeline name (Leave empty to generate dynamically)'
+        required: false
+        default: ''
       orgName:
-        description: 'Azure DevOps Organization Name'
+        description: 'Enter your Azure DevOps Organization name'
         required: true
+        default: 'devopsokn'
       projectName:
-        description: 'Azure DevOps Project Name'
+        description: 'Enter your Azure DevOps Project name'
         required: true
+        default: 'MyPOC'
       azurePipelineName:
-        description: 'Azure DevOps Pipeline Name'
+        description: 'Enter the target repository name'
         required: true
-        default: 'test_automation_repo'  # Default pipeline name if not provided
-      resourceYamlFile:
-        description: 'Resource YAML file (e.g., vm_provision.yaml)'
+        default: 'test_Automation_Repo'
+      ResourceYamlFile:
+        description: 'Select the resource YAML file'
         required: true
-        default: 'vm_provision.yaml'  # Default YAML file
         type: choice
         options:
           - 'vm_provision.yaml'
           - 'webapp_provision.yaml'
-      targetRepositoryName:
-        description: 'Target Repository Name'
-        required: true
-      pipelineName:
-        description: 'Pipeline Name'
-        required: true
-
-env:
-  RESOURCE_YAML: 'vm_provision.yaml'  # Default to vm_provision.yaml file
-  SECRET_KEY: ${{ secrets.MY_SECRET_KEY }}  # Add the secret key from GitHub Secrets
 
 jobs:
-  trigger-build:
+  trigger-azure-pipeline:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout the code
+        uses: actions/checkout@v2
 
-      - name: Trigger Azure DevOps Build
+      - name: Setup Azure Login using Service Principal
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set dynamic pipeline name if not provided
+        id: set-pipeline-name
         run: |
-          echo "Triggering Azure DevOps build with pipeline name ${{ github.event.inputs.azurePipelineName }} using YAML file ${{ github.event.inputs.resourceYamlFile }}..."
-          
-          # Perform the request to trigger the build with the provided parameters
-          curl -L -s -w "%{http_code}" -o response.json -D headers.txt \
-            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-                  "definition": {
-                    "name": "${{ github.event.inputs.azurePipelineName }}"  # Using pipeline name instead of ID
-                  },
-                  "sourceBranch": "refs/heads/main",  # Adjust if you need a different branch
-                  "parameters": {
-                    "resourceYamlFile": "${{ github.event.inputs.resourceYamlFile }}",  # YAML file parameter
-                    "orgName": "${{ github.event.inputs.orgName }}",  # Org name parameter
-                    "projectName": "${{ github.event.inputs.projectName }}",  # Project name parameter
-                    "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}",  # Repository name parameter
-                    "pipelineName": "${{ github.event.inputs.pipelineName }}",  # Pipeline name parameter
-                    "secretKey": "${{ secrets.MY_SECRET_KEY }}"  # Pass the secret key securely
-                  }
-                }' \
-            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/build/builds?api-version=6.0"
+          if [ -z "${{ github.event.inputs.pipelineName }}" ]; then
+            # Generate dynamic pipeline name based on date and repo name
+            generated_pipeline_name="webapp-pipeline-$(date +'%Y%m%d%H%M%S')"
+            echo "Generated pipeline name: $generated_pipeline_name"
+            echo "::set-output name=pipelineName::$generated_pipeline_name"
+          else
+            echo "::set-output name=pipelineName::${{ github.event.inputs.pipelineName }}"
+          fi
 
-          # Log response code, body, and headers for debugging
-          echo "Response Status Code: $response"
-          echo "Response Body: "
-          cat response.json
-          echo "Response Headers: "
-          cat headers.txt
-
-      - name: Check if the build was triggered successfully
-        if: ${{ failure() }}
-        run: |
-          echo "Build trigger failed! Please check the response above for details."
-          exit 1
+      - name: Trigger an Existing Azure Pipeline to deploy the app to PRODUCTION
+        uses: Azure/pipelines@releases/v1
+        with:
+          azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
+          azure-pipeline-name: 'test_Automation_Repo'  # Use your existing pipeline name here
+          azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
+          parameters: |
+            {
+              "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
+              "azurePipelineName": "${{ github.event.inputs.azurePipelineName }}"
+            }
