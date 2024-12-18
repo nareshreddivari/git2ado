@@ -35,16 +35,16 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Trigger Azure Pipeline
-        uses: Azure/pipelines@v1
-        with:
-          azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
-          azure-pipeline-name: 'test_Automation_Repo'  # Use your existing pipeline name here
-          azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
-          azure-pipeline-variables: |
-            {
-              "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
-              "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}",
-              "orgName": "${{ github.event.inputs.orgName }}",
-              "projectName": "${{ github.event.inputs.projectName }}"
-            }
+      - name: Trigger Azure Pipeline using REST API
+        run: |
+          curl -X POST "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ secrets.PIPELINE_ID }}/runs?api-version=7.1-preview.1" \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Basic $(echo -n :${{ secrets.AZURE_DEVOPS_TOKEN }} | base64)" \
+          -d '{
+                "variables": {
+                  "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
+                  "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}",
+                  "orgName": "${{ github.event.inputs.orgName }}",
+                  "projectName": "${{ github.event.inputs.projectName }}"
+                }
+              }'
