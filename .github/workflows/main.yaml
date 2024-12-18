@@ -11,10 +11,10 @@ on:
         description: 'Azure DevOps Project Name'
         required: true
         default: 'MyPOC'  # Change to your project name
-      azurePipelineName:
-        description: 'Azure DevOps Pipeline Name'
+      azurePipelineDefinitionId:
+        description: 'Azure DevOps Pipeline Definition ID'
         required: true
-        default: 'test_Automation_Repo'  # Change to your pipeline name
+        default: '260'  # Use the correct Pipeline Definition ID here
       ResourceYamlFile:
         description: 'Select the resource YAML file'
         required: true
@@ -38,88 +38,29 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}  # Ensure AZURE_CREDENTIALS is saved in GitHub Secrets
 
-      # Step 3: Get the Azure DevOps pipeline ID by name
-      - name: Get Pipeline ID by Name
-        run: |
-          echo "Searching for the pipeline ID by name..."
-          API_URL="https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines?api-version=7.1-preview.1"
-
-          # Hardcoded PAT for authorization (ensure the correct token scope)
-          PAT_TOKEN="3sI4Q2zIqRsNEFx5gcnnVu68FKq2jWYJu00VgnomnwV01mKh0q15JQQJ99ALACAAAAAAAAAAAAASAZDOLTAY"  # Replace with your actual PAT
-
-          # Debugging: Print the raw PAT token (only for debugging, remove in production)
-          echo "Raw PAT Token: $PAT_TOKEN"
-          
-          # Base64 encode the PAT with a colon prefix (this is the expected format)
-          AUTH_HEADER=$(echo -n ":$PAT_TOKEN" | base64)
-          
-          # Debugging: Print the Authorization header
-          echo "Authorization Header: Basic $AUTH_HEADER"
-
-          # Make the API request to get pipeline ID
-          RESPONSE=$(curl -s -X GET \
-            "$API_URL" \
-            -H "Authorization: Basic $AUTH_HEADER" \
-            --http1.1)
-
-          echo "Response from API: $RESPONSE"
-          
-          # Check if the response is empty or not in expected format
-          if [[ "$RESPONSE" == "" ]]; then
-            echo "Error: No response from the API. Check your organization or project name."
-            exit 1
-          fi
-          
-          # Attempt to extract pipeline ID using jq
-          PIPELINE_ID=$(echo "$RESPONSE" | jq -r ".value[] | select(.name==\"${{ github.event.inputs.azurePipelineName }}\") | .id")
-          
-          # Check if the pipeline ID was found
-          if [[ "$PIPELINE_ID" == "null" || "$PIPELINE_ID" == "" ]]; then
-            echo "Error: Pipeline with name '${{ github.event.inputs.azurePipelineName }}' not found."
-            exit 1
-          fi
-          
-          echo "Pipeline ID: $PIPELINE_ID"
-          echo "PIPELINE_ID=$PIPELINE_ID" >> $GITHUB_ENV
-
-      # Step 4: Get Resource YAML file
+      # Step 3: Get Resource YAML file
       - name: Get Resource YAML file
         run: |
           echo "Selected YAML file: ${{ github.event.inputs.ResourceYamlFile }}"
           echo "RESOURCE_YAML=${{ github.event.inputs.ResourceYamlFile }}" >> $GITHUB_ENV
 
-      # Step 5: Test Authorization with a simple API call to verify PAT
+      # Step 4: Test Authorization with a simple API call to verify PAT
       - name: Test Authorization with simple API call
         run: |
           echo "Testing Authorization with a simple API call"
           curl -v -X GET \
-            -H "Authorization: Basic $AUTH_HEADER" \
+            -H "Authorization: Basic ${{ secrets.AZURE_PAT }}" \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/projects?api-version=7.1-preview.1"
 
-      # Step 6: Trigger Azure DevOps Pipeline
+      # Step 5: Trigger Azure DevOps Pipeline using the pipeline definition ID
       - name: Trigger Azure DevOps Pipeline
         run: |
-          echo "Triggering Azure DevOps pipeline with ID ${{ env.PIPELINE_ID }} using YAML file ${{ env.RESOURCE_YAML }}..."
-          
-          # Debug the Authorization header and payload
-          echo "Triggering pipeline with body: "
-          echo '{
-                  "resources": {
-                    "repositories": {
-                      "self": {
-                        "refName": "refs/heads/main"
-                      }
-                    }
-                  },
-                  "templateParameters": {
-                    "yamlFile": "'${{ env.RESOURCE_YAML }}'"
-                  }
-                }'
+          echo "Triggering Azure DevOps pipeline with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ env.RESOURCE_YAML }}..."
 
           # Trigger the pipeline using the correct URL and header
           curl -v -X POST \
-            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ env.PIPELINE_ID }}/runs?api-version=7.1-preview.1" \
-            -H "Authorization: Basic $AUTH_HEADER" \
+            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ github.event.inputs.azurePipelineDefinitionId }}/runs?api-version=7.1-preview.1" \
+            -H "Authorization: Basic ${{ secrets.AZURE_PAT }}" \
             -H "Content-Type: application/json" \
             -d '{
                   "resources": {
