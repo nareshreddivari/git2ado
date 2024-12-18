@@ -39,11 +39,10 @@ jobs:
       - name: Trigger Azure DevOps Build
         run: |
           echo "Triggering Azure DevOps build with pipeline name ${{ github.event.inputs.azurePipelineName }} using YAML file ${{ github.event.inputs.resourceYamlFile }}..."
-          echo "Using secret key: $SECRET_KEY"  # You can use the secret key here for debugging (do not print in production)
-
+          
           # Perform the request to trigger the build with the provided parameters
           response=$(curl -L -s -w "%{http_code}" -o response.json -D headers.txt \
-            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_TOKEN }}" \  # Keeping this authorization header as is
+            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_PAT }}" \  # Corrected header usage
             -H "Content-Type: application/json" \
             -d '{
                   "definition": {
@@ -56,7 +55,7 @@ jobs:
                     "projectName": "${{ github.event.inputs.projectName }}",  # Project name parameter
                     "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}",  # Repository name parameter
                     "pipelineName": "${{ github.event.inputs.pipelineName }}",  # Pipeline name parameter
-                    "secretKey": "$SECRET_KEY"  # Pass the secret key as a parameter to Azure DevOps build
+                    "secretKey": "${{ secrets.MY_SECRET_KEY }}"  # Pass the secret key securely
                   }
                 }' \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/build/builds?api-version=6.0")
