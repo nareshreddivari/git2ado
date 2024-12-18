@@ -43,12 +43,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Trigger Azure DevOps Build using cURL
+      # Step 2: Print Authorization Token (for debugging)
+      - name: Print Authorization Token
+        run: |
+          echo "Authorization Header: $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)"
+
+      # Step 3: Print cURL Request Payload (for debugging)
+      - name: Print cURL Request Payload
+        run: |
+          echo "cURL Request Payload: "
+          echo '{
+            "definition": {
+              "id": "${{ github.event.inputs.azurePipelineDefinitionId }}"
+            },
+            "sourceBranch": "refs/heads/main",
+            "parameters": {
+              "yamlFile": "${{ env.RESOURCE_YAML }}",
+              "orgName": "${{ github.event.inputs.orgName }}",
+              "projectName": "${{ github.event.inputs.projectName }}",
+              "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}",
+              "pipelineName": "${{ github.event.inputs.pipelineName }}"
+            }
+          }'
+
+      # Step 4: Trigger Azure DevOps Build using cURL
       - name: Trigger Azure DevOps Build
         run: |
           echo "Triggering Azure DevOps build with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ env.RESOURCE_YAML }}..."
           
-          # Ensure that all required parameters are present
           curl --http1.1 -v \
             -H "Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)" \
             -H "Content-Type: application/json" \
@@ -67,14 +89,14 @@ jobs:
                 }' \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/build/builds?api-version=6.1-preview.6"
 
-      # Step 3: Handle the result of the build trigger
+      # Step 5: Handle the result of the build trigger
       - name: Check if the build was triggered successfully
         if: ${{ failure() }}
         run: |
           echo "Build trigger failed!"
           exit 1
 
-      # Step 4: Post-job cleanup or additional actions
+      # Step 6: Post-job cleanup or additional actions
       - name: Post job cleanup
         run: |
           echo "Cleaning up after the build trigger..."
