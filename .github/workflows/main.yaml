@@ -43,16 +43,16 @@ jobs:
         run: |
           echo "Searching for the pipeline ID by name..."
           API_URL="https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines?api-version=7.1-preview.1"
-          
-          # Hardcoded PAT for authorization
-          PAT_TOKEN="3sI4Q2zIqRsNEFx5gcnnVu68FKq2jWYJu00VgnomnwV01mKh0q15JQQJ99ALACAAAAAAAAAAAAASAZDOLTAY"
 
-          # Base64 encode the PAT (with a colon prefix) and set the Authorization header
+          # Hardcoded PAT for authorization
+          PAT_TOKEN="your_personal_access_token"  # Replace with your actual PAT
+
+          # Base64 encode the PAT with a colon prefix
           AUTH_HEADER=$(echo -n ":$PAT_TOKEN" | base64)
           
           # Debugging: Print the Authorization header
           echo "Authorization Header: Basic $AUTH_HEADER"
-          
+
           # Make the API request to get pipeline ID (use HTTP/1.1 instead of HTTP/2)
           RESPONSE=$(curl -v -s -X GET \
             "$API_URL" \
@@ -85,10 +85,35 @@ jobs:
           echo "Selected YAML file: ${{ github.event.inputs.ResourceYamlFile }}"
           echo "RESOURCE_YAML=${{ github.event.inputs.ResourceYamlFile }}" >> $GITHUB_ENV
 
-      # Step 5: Trigger the Azure DevOps pipeline using the selected YAML file
+      # Step 5: Test Authorization with a simple API call to verify PAT
+      - name: Test Authorization with simple API call
+        run: |
+          echo "Testing Authorization with a simple API call"
+          curl -v -X GET \
+            -H "Authorization: Basic $AUTH_HEADER" \
+            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/projects?api-version=7.1-preview.1"
+          
+      # Step 6: Trigger Azure DevOps Pipeline
       - name: Trigger Azure DevOps Pipeline
         run: |
           echo "Triggering Azure DevOps pipeline with ID ${{ env.PIPELINE_ID }} using YAML file ${{ env.RESOURCE_YAML }}..."
+          
+          # Debug the Authorization header and payload
+          echo "Triggering pipeline with body: "
+          echo '{
+                  "resources": {
+                    "repositories": {
+                      "self": {
+                        "refName": "refs/heads/main"
+                      }
+                    }
+                  },
+                  "templateParameters": {
+                    "yamlFile": "'${{ env.RESOURCE_YAML }}'"
+                  }
+                }'
+
+          # Trigger the pipeline using the correct URL and header
           curl -v -X POST \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ env.PIPELINE_ID }}/runs?api-version=7.1-preview.1" \
             -H "Authorization: Basic $AUTH_HEADER" \
