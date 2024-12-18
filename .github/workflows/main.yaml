@@ -1,20 +1,24 @@
-name: Trigger Existing Azure Pipeline
+name: Trigger Azure DevOps Pipeline
 
 on:
   workflow_dispatch:
     inputs:
       orgName:
-        description: 'Enter your Azure DevOps Organization name'
+        description: 'Azure DevOps Organization Name'
         required: true
-        default: 'devopsokn'
+        default: 'devopsokn'  # Change to your organization name
       projectName:
-        description: 'Enter your Azure DevOps Project name'
+        description: 'Azure DevOps Project Name'
         required: true
-        default: 'MyPOC'
+        default: 'MyPOC'  # Change to your project name
+      patToken:
+        description: 'Personal Access Token for Azure DevOps'
+        required: true
+        default: 'Your-Base64-encoded-PAT'  # Change to your Base64 encoded PAT
       azurePipelineName:
-        description: 'Enter the target repository name'
+        description: 'Azure DevOps Pipeline Name'
         required: true
-        default: 'test_Automation_Repo'
+        default: 'test_Automation_Repo'  # Change to your pipeline name
       ResourceYamlFile:
         description: 'Select the resource YAML file'
         required: true
@@ -24,62 +28,54 @@ on:
           - 'webapp_provision.yaml'
 
 jobs:
-  trigger-azure-pipeline:
+  trigger-pipeline:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout the code
-        uses: actions/checkout@v2
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Get Azure DevOps Pipeline ID
-        id: get-pipeline-id
+      # Step 2: Setup Azure Login using Service Principal
+      - name: Setup Azure Login using Service Principal
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}  # Ensure AZURE_CREDENTIALS is saved in GitHub Secrets
+
+      # Step 3: Get the Azure DevOps pipeline ID by name
+      - name: Get Pipeline ID by Name
         run: |
-          echo "Getting the Azure DevOps pipeline ID..."
-          PIPELINE_NAME="${{ github.event.inputs.azurePipelineName }}"  # Update with the actual pipeline name
-          
-          # Hardcoding the PAT token
-          PAT_TOKEN="3sI4Q2zIqRsNEFx5gcnnVu68FKq2jWYJu00VgnomnwV01mKh0q15JQQJ99ALACAAAAAAAAAAAAASAZDOLTAY"
-          
-          # Base64 encode the PAT
-          BASE64_PAT=$(echo -n ":$PAT_TOKEN" | base64)
-          
-          # Request Azure DevOps pipeline ID
-          API_RESPONSE=$(curl -L -s -v -X GET \
+          echo "Searching for the pipeline ID by name..."
+          PIPELINE_ID=$(curl -s -X GET \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines?api-version=7.1-preview.1" \
-            -H "Authorization: Basic $BASE64_PAT")
-          
-          echo "API Response: $API_RESPONSE"
-          
-          # Extract the Pipeline ID from the response
-          PIPELINE_ID=$(echo $API_RESPONSE | jq -r ".value[] | select(.name == \"$PIPELINE_NAME\") | .id")
-          
-          if [ -z "$PIPELINE_ID" ]; then
-            echo "Error: Pipeline ID not found"
-            exit 1
-          fi
-          
+            -H "Authorization: Basic $(echo -n ":${{ github.event.inputs.patToken }}" | base64)" \
+            --http1.1 | jq -r ".value[] | select(.name==\"${{ github.event.inputs.azurePipelineName }}\") | .id")
           echo "Pipeline ID: $PIPELINE_ID"
-          
-          echo "pipeline_id=$PIPELINE_ID" >> $GITHUB_ENV
+          echo "PIPELINE_ID=$PIPELINE_ID" >> $GITHUB_ENV
 
-      - name: Trigger Azure Pipeline
+      # Step 4: Get Resource YAML file
+      - name: Get Resource YAML file
         run: |
-          if [ -z "${{ env.pipeline_id }}" ]; then
-            echo "Error: Pipeline ID not found"
-            exit 1
-          fi
-          echo "Triggering the Azure DevOps pipeline..."
-          
-          # Trigger the Azure DevOps pipeline with the required variables
-          curl -L -X POST \
-            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ env.pipeline_id }}/runs?api-version=7.1-preview.1" \
+          echo "Selected YAML file: ${{ github.event.inputs.ResourceYamlFile }}"
+          echo "RESOURCE_YAML=${{ github.event.inputs.ResourceYamlFile }}" >> $GITHUB_ENV
+
+      # Step 5: Trigger the Azure DevOps pipeline using the selected YAML file
+      - name: Trigger Azure DevOps Pipeline
+        run: |
+          echo "Triggering Azure DevOps pipeline with ID ${{ env.PIPELINE_ID }} using YAML file ${{ env.RESOURCE_YAML }}..."
+          curl -v -L -X POST \
+            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ env.PIPELINE_ID }}/runs?api-version=7.1-preview.1" \
+            -H "Authorization: Basic $(echo -n ":${{ github.event.inputs.patToken }}" | base64)" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Basic $(echo -n ":$PAT_TOKEN" | base64)" \
             -d '{
-              "variables": {
-                "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
-                "azurePipelineName": "${{ github.event.inputs.azurePipelineName }}",
-                "orgName": "${{ github.event.inputs.orgName }}",
-                "projectName": "${{ github.event.inputs.projectName }}"
-              }
-            }' --http1.1
+                  "resources": {
+                    "repositories": {
+                      "self": {
+                        "refName": "refs/heads/main"
+                      }
+                    }
+                  },
+                  "templateParameters": {
+                    "yamlFile": "'${{ env.RESOURCE_YAML }}'"
+                  }
+                }' --http1.1
