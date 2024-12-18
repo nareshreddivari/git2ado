@@ -31,19 +31,17 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v2
 
-      - name: Setup Azure Login using Service Principal
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Get Azure DevOps Pipeline ID
         id: get-pipeline-id
         run: |
           echo "Getting the Azure DevOps pipeline ID..."
           PIPELINE_NAME="${{ github.event.inputs.azurePipelineName }}"  # Update with the actual pipeline name
           
+          # Hardcoding the PAT token
+          PAT_TOKEN="3sI4Q2zIqRsNEFx5gcnnVu68FKq2jWYJu00VgnomnwV01mKh0q15JQQJ99ALACAAAAAAAAAAAAASAZDOLTAY"
+          
           # Base64 encode the PAT
-          BASE64_PAT=$(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)
+          BASE64_PAT=$(echo -n ":$PAT_TOKEN" | base64)
           
           # Request Azure DevOps pipeline ID
           API_RESPONSE=$(curl -L -s -v -X GET \
@@ -76,7 +74,7 @@ jobs:
           curl -L -X POST \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ env.pipeline_id }}/runs?api-version=7.1-preview.1" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)" \
+            -H "Authorization: Basic $(echo -n ":$PAT_TOKEN" | base64)" \
             -d '{
               "variables": {
                 "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
@@ -85,5 +83,3 @@ jobs:
                 "projectName": "${{ github.event.inputs.projectName }}"
               }
             }' --http1.1
-        env:
-          AZURE_DEVOPS_TOKEN: ${{ secrets.AZURE_DEVOPS_TOKEN }}
