@@ -14,7 +14,7 @@ on:
       patToken:
         description: 'Personal Access Token for Azure DevOps'
         required: true
-        default: 'Your-Base64-encoded-PAT'  # Change to your Base64 encoded PAT
+        default: 'Your-PAT'  # Change to your PAT
       azurePipelineName:
         description: 'Azure DevOps Pipeline Name'
         required: true
