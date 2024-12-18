@@ -9,18 +9,14 @@ on:
       projectName:
         description: 'Azure DevOps Project Name'
         required: true
-      azurePipelineDefinitionId:
-        description: 'Azure DevOps Pipeline Definition ID'
+      azurePipelineName:
+        description: 'Azure DevOps Pipeline Name'
         required: true
-        default: '260'  # Default to build definition ID 260
+        default: 'test_automation_repo'  # Default pipeline name if not provided
       resourceYamlFile:
         description: 'Resource YAML file (e.g., vm_provision.yaml)'
         required: true
         default: 'vm_provision.yaml'  # Default YAML file
-        type: choice
-        options:
-          - 'vm_provision.yaml'
-          - 'webapp_provision.yaml'
       targetRepositoryName:
         description: 'Target Repository Name'
         required: true
@@ -36,30 +32,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository to access the resources
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Trigger Azure DevOps Build using the provided parameters
       - name: Trigger Azure DevOps Build
         run: |
-          echo "Triggering Azure DevOps build with definition ID ${{ github.event.inputs.azurePipelineDefinitionId }} using YAML file ${{ github.event.inputs.resourceYamlFile }}..."
+          echo "Triggering Azure DevOps build with pipeline name ${{ github.event.inputs.azurePipelineName }} using YAML file ${{ github.event.inputs.resourceYamlFile }}..."
 
           # Perform the request to trigger the build with the provided parameters
-          response=$(curl -s -w "%{http_code}" -o response.json -D headers.txt \
-            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_TOKEN }}" \
+          response=$(curl -L -s -w "%{http_code}" -o response.json -D headers.txt \
+            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_PAT }}" \
             -H "Content-Type: application/json" \
             -d '{
                   "definition": {
-                    "id": "${{ github.event.inputs.azurePipelineDefinitionId }}"
+                    "name": "${{ github.event.inputs.azurePipelineName }}"  # Using pipeline name instead of ID
                   },
-                  "sourceBranch": "refs/heads/main",  # Adjust this if you need a different branch
+                  "sourceBranch": "refs/heads/main",  # Adjust if you need a different branch
                   "parameters": {
-                    "yamlFile": "${{ github.event.inputs.resourceYamlFile }}",  # Using the parameter passed from GitHub
-                    "orgName": "${{ github.event.inputs.orgName }}",  # Passed from GitHub input
-                    "projectName": "${{ github.event.inputs.projectName }}",  # Passed from GitHub input
-                    "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}",  # Passed from GitHub input
-                    "pipelineName": "${{ github.event.inputs.pipelineName }}"  # Passed from GitHub input
+                    "yamlFile": "${{ github.event.inputs.resourceYamlFile }}",  # YAML file parameter
+                    "orgName": "${{ github.event.inputs.orgName }}",  # Org name parameter
+                    "projectName": "${{ github.event.inputs.projectName }}",  # Project name parameter
+                    "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}",  # Repository name parameter
+                    "pipelineName": "${{ github.event.inputs.pipelineName }}"  # Pipeline name parameter
                   }
                 }' \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/build/builds?api-version=6.0")
@@ -71,7 +65,6 @@ jobs:
           echo "Response Headers: "
           cat headers.txt
 
-      # Step 3: Check if the build was triggered successfully
       - name: Check if the build was triggered successfully
         if: ${{ failure() }}
         run: |
