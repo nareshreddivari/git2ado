@@ -45,8 +45,8 @@ jobs:
           echo "Triggering Azure DevOps build with pipeline name ${{ github.event.inputs.azurePipelineName }} using YAML file ${{ github.event.inputs.resourceYamlFile }}..."
           
           # Perform the request to trigger the build with the provided parameters
-          response=$(curl -L -s -w "%{http_code}" -o response.json -D headers.txt \
-            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_TOKEN }}" \  # Corrected header usage
+          curl -L -s -w "%{http_code}" -o response.json -D headers.txt \
+            -H "Authorization: Basic ${{ secrets.AZURE_DEVOPS_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
                   "definition": {
@@ -62,7 +62,7 @@ jobs:
                     "secretKey": "${{ secrets.MY_SECRET_KEY }}"  # Pass the secret key securely
                   }
                 }' \
-            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/build/builds?api-version=6.0")
+            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/build/builds?api-version=6.0"
 
           # Log response code, body, and headers for debugging
           echo "Response Status Code: $response"
