@@ -45,11 +45,18 @@ jobs:
           
           # Ensure the PAT is base64-encoded and replace the placeholder with actual encoded PAT.
           BASE64_PAT="${{ secrets.AZURE_DEVOPS_TOKEN }}"  # Azure DevOps Token should be stored as a secret in your repository
-
+      
+          # Fetch pipeline data
           API_RESPONSE=$(curl -s --http1.1 -X GET \
             "https://dev.azure.com/$ORG_NAME/$PROJECT_NAME/_apis/pipelines?api-version=7.1-preview.1" \
             -H "Authorization: Basic $BASE64_PAT")
-          
+      
+          # Check if API_RESPONSE contains valid JSON and doesn't redirect
+          if echo "$API_RESPONSE" | grep -q "Object moved"; then
+            echo "Error: Authentication failed or the request was redirected. Check your PAT."
+            exit 1
+          fi
+      
           echo "API Response: $API_RESPONSE"
           
           # Extract the pipeline ID from the response based on the pipeline name
@@ -59,11 +66,12 @@ jobs:
             echo "Error: Pipeline ID not found"
             exit 1
           fi
-
+      
           echo "Pipeline ID: $PIPELINE_ID"
           
           # Set pipeline_id as an environment variable for the next step
           echo "pipeline_id=$PIPELINE_ID" >> $GITHUB_ENV
+
 
       - name: Trigger Azure Pipeline
         run: |
