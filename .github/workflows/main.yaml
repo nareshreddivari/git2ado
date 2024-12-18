@@ -11,10 +11,6 @@ on:
         description: 'Azure DevOps Project Name'
         required: true
         default: 'MyPOC'  # Change to your project name
-      patToken:
-        description: 'Personal Access Token for Azure DevOps'
-        required: true
-        default: 'Your-PAT'  # Change to your PAT
       azurePipelineName:
         description: 'Azure DevOps Pipeline Name'
         required: true
@@ -48,9 +44,13 @@ jobs:
           echo "Searching for the pipeline ID by name..."
           API_URL="https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines?api-version=7.1-preview.1"
           
-          # Base64 encode the PAT for authorization
-          AUTH_HEADER=$(echo -n ":${{ github.event.inputs.patToken }}" | base64)
+          # Hardcoded PAT for authorization
+          PAT_TOKEN="3sI4Q2zIqRsNEFx5gcnnVu68FKq2jWYJu00VgnomnwV01mKh0q15JQQJ99ALACAAAAAAAAAAAAASAZDOLTAY"
 
+          # Base64 encode the PAT
+          AUTH_HEADER=$(echo -n ":${PAT_TOKEN}" | base64)
+
+          # Make the API request to get pipeline ID
           RESPONSE=$(curl -s -X GET \
             "$API_URL" \
             -H "Authorization: Basic $AUTH_HEADER" \
