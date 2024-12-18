@@ -26,6 +26,7 @@ on:
 jobs:
   trigger-azure-pipeline:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout the code
         uses: actions/checkout@v2
@@ -39,36 +40,29 @@ jobs:
         id: get-pipeline-id
         run: |
           echo "Getting the Azure DevOps pipeline ID..."
-          PIPELINE_NAME="${{ github.event.inputs.azurePipelineName }}"
-          ORG_NAME="${{ github.event.inputs.orgName }}"
-          PROJECT_NAME="${{ github.event.inputs.projectName }}"
+          PIPELINE_NAME="${{ github.event.inputs.azurePipelineName }}"  # Update with the actual pipeline name
           
-          # Use base64-encoded PAT and check the verbose output
-          BASE64_PAT="${{ secrets.AZURE_DEVOPS_TOKEN }}"
+          # Base64 encode the PAT
+          BASE64_PAT=$(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)
           
-          echo "Requesting Azure DevOps Pipeline ID..."
+          # Request Azure DevOps pipeline ID
+          API_RESPONSE=$(curl -L -s -v -X GET \
+            "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines?api-version=7.1-preview.1" \
+            -H "Authorization: Basic $BASE64_PAT")
           
-          # Make API call with verbose output to inspect full response
-          curl -v -X GET \
-            "https://dev.azure.com/$ORG_NAME/$PROJECT_NAME/_apis/pipelines?api-version=7.1-preview.1" \
-            -H "Authorization: Basic $BASE64_PAT" \
-            -o response.json
-      
-          # Check the output and extract the pipeline ID
-          cat response.json
-      
-          # Parse and check for the pipeline ID
-          PIPELINE_ID=$(jq -r ".value[] | select(.name == \"$PIPELINE_NAME\") | .id" response.json)
-          echo "Pipeline ID: $PIPELINE_ID"
-      
+          echo "API Response: $API_RESPONSE"
+          
+          # Extract the Pipeline ID from the response
+          PIPELINE_ID=$(echo $API_RESPONSE | jq -r ".value[] | select(.name == \"$PIPELINE_NAME\") | .id")
+          
           if [ -z "$PIPELINE_ID" ]; then
             echo "Error: Pipeline ID not found"
             exit 1
           fi
-      
+          
+          echo "Pipeline ID: $PIPELINE_ID"
+          
           echo "pipeline_id=$PIPELINE_ID" >> $GITHUB_ENV
-
-
 
       - name: Trigger Azure Pipeline
         run: |
@@ -77,10 +71,12 @@ jobs:
             exit 1
           fi
           echo "Triggering the Azure DevOps pipeline..."
-          curl -X POST \
+          
+          # Trigger the Azure DevOps pipeline with the required variables
+          curl -L -X POST \
             "https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}/_apis/pipelines/${{ env.pipeline_id }}/runs?api-version=7.1-preview.1" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Basic $(echo -n :${{ secrets.AZURE_DEVOPS_TOKEN }} | base64)" \
+            -H "Authorization: Basic $(echo -n ":${{ secrets.AZURE_DEVOPS_TOKEN }}" | base64)" \
             -d '{
               "variables": {
                 "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
