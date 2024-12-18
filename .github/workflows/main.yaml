@@ -35,7 +35,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Trigger an Existing Azure Pipeline to deploy the app to PRODUCTION
+      - name: Trigger Azure Pipeline
         uses: Azure/pipelines@releases/v1
         with:
           azure-devops-project-url: 'https://dev.azure.com/${{ github.event.inputs.orgName }}/${{ github.event.inputs.projectName }}'
@@ -44,5 +44,7 @@ jobs:
           parameters: |
             {
               "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
-              "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}"
+              "targetRepositoryName": "${{ github.event.inputs.targetRepositoryName }}",
+              "orgName": "${{ github.event.inputs.orgName }}",
+              "projectName": "${{ github.event.inputs.projectName }}"
             }
