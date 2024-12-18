@@ -51,6 +51,6 @@ jobs:
           azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
           parameters: |
             {
-              "ResourceYamlFile": "${{ github.event.inputs.ResourceYamlFile }}",
+              "ResourceYamlFile": "vm_provision.yaml",
               "azurePipelineName": "${{ github.event.inputs.azurePipelineName }}"
             }
